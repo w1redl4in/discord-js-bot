@@ -1,5 +1,4 @@
 const Discord = require("discord.js");
-const ytdl = require("ytdl-core");
 const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
@@ -16,8 +15,6 @@ for (var filename of commandFiles) {
   const command = require(`./commands/${filename}`);
   bot.commands.set(command.name, command);
 }
-
-console.log(bot.commands);
 
 bot.on("ready", () => {
   console.log(`Logged in as ${bot.user.tag}!`);
