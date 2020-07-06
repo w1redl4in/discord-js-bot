@@ -7,11 +7,17 @@ const execute = (bot, msg, args) => {
     search(string, (err, result) => {
       if (err) {
         msg.reply(err);
+      } else if (result && result.videos.length > 0) {
+        const song = result.videos[0];
+        const queue = bot.queues.get(msg.guild.id);
+        if (queue) {
+          queue.songs.push(song);
+          const lastSongAdded = queue.songs[queue.songs.length - 1];
+          msg.reply(`Nova música adicionada: ${lastSongAdded.title}`);
+          bot.queues.set(msg.guild.id, queue);
+        } else playSong(bot, msg, song);
       } else {
-        if (result && result.videos.length > 0) {
-          const song = result.videos[0];
-          playSong(bot, msg, song);
-        }
+        return msg.reply("Música ou Áudio não encontrado.");
       }
     });
   } catch (error) {
@@ -20,14 +26,20 @@ const execute = (bot, msg, args) => {
 };
 
 const playSong = async (bot, msg, song) => {
+  let queue = bot.queues.get(msg.member.guild.id);
   if (!song) {
+    if (queue) {
+      queue.connection.disconnect();
+      return bot.queues.delete(msg.member.guild.id);
+    }
   }
+
   if (!msg.member.voice.channel) {
     return msg.reply("Você precisa estar em um canal de voz.");
   }
-  let queue = bot.queues.get(msg.member.guild.id);
+
   if (!queue) {
-    msg.reply(`Música: ${song.title}`);
+    msg.reply(`Tocando agora: ${song.title}`);
     const connection = await msg.member.voice.channel.join();
     queue = {
       volume: 10,
@@ -35,10 +47,23 @@ const playSong = async (bot, msg, song) => {
       dispatcher: null,
       songs: [song],
     };
+
     queue.dispatcher = await queue.connection.play(await ytdl(song.url), {
       type: "opus",
     });
+
+    queue.dispatcher.on("finish", () => {
+      queue.songs.shift();
+      playSong(bot, msg, queue.songs[0]);
+    });
+
     queue.dispatcher = bot.queues.set(msg.member.guild.id, queue);
+  } else {
+    queue.songs.push(song);
+    bot.queues.set(msg.member.guild.id);
+    queue.dispatcher = await queue.connection.play(await ytdl(song.url), {
+      type: "opus",
+    });
   }
 };
 
@@ -46,4 +71,5 @@ module.exports = {
   name: "play",
   help: "Plays a song",
   execute,
+  playSong,
 };
