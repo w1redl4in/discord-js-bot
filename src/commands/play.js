@@ -27,16 +27,18 @@ const execute = (bot, msg, args) => {
 
 const playSong = async (bot, msg, song) => {
   let queue = bot.queues.get(msg.member.guild.id);
-  if (!song) {
-    if (queue) {
-      queue.connection.disconnect();
-      return bot.queues.delete(msg.member.guild.id);
-    }
+  console.log("fila depois do skip", queue);
+
+  if (!song && queue) {
+    queue.connection.disconnect();
+    return bot.queues.delete(msg.member.guild.id);
   }
 
   if (!msg.member.voice.channel) {
     return msg.reply("Você precisa estar em um canal de voz.");
   }
+
+  bot.queues.set(msg.member.guild.id, queue);
 
   if (!queue) {
     msg.reply(`Tocando agora: ${song.title}`);
@@ -54,13 +56,13 @@ const playSong = async (bot, msg, song) => {
 
     queue.dispatcher.on("finish", () => {
       queue.songs.shift();
+      bot.queues.set(msg.member.guild.id, queue);
       playSong(bot, msg, queue.songs[0]);
     });
 
     queue.dispatcher = bot.queues.set(msg.member.guild.id, queue);
   } else {
-    queue.songs.push(song);
-    bot.queues.set(msg.member.guild.id);
+    bot.queues.set(msg.member.guild.id, queue);
     queue.dispatcher = await queue.connection.play(await ytdl(song.url), {
       type: "opus",
     });

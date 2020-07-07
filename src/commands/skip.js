@@ -5,8 +5,13 @@ const execute = (bot, msg, args) => {
   if (!queue) {
     return msg.reply("Não existe nenhuma música sendo reproduzida no momento.");
   }
-  queue.songs.shift();
+  const a = queue.songs.shift();
   bot.queues.set(msg.guild.id, queue);
+
+  console.log("item que é pra ser tocado: ", queue.songs[0]);
+  console.log("item removido pelo shift", a);
+  console.log("array atual", queue.songs);
+
   playSong(bot, msg, queue.songs[0]);
 };
 
